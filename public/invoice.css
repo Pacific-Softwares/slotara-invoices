@@ -25,9 +25,10 @@ dt{color:#64748b}dd{margin:0;font-weight:600}
 .notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1.5rem;margin-top:2rem;padding-top:1.5rem;border-top:1px solid #e2e8f0}
 .notes p{margin:0}
 .foot{margin-top:2rem;text-align:center;color:#64748b;font-size:13px}
-.stamp{position:absolute;top:2.2rem;right:-3.2rem;transform:rotate(35deg);width:13rem;text-align:center;padding:.35rem 0;font-weight:800;letter-spacing:.2em;text-transform:uppercase;font-size:13px;color:#fff}
+.stamp{position:absolute;top:1.15rem;right:-3.4rem;transform:rotate(35deg);width:12rem;text-align:center;padding:.35rem 0;font-weight:800;letter-spacing:.2em;text-transform:uppercase;font-size:13px;color:#fff}
+.sheet:has(.stamp) .meta{padding-top:1.6rem;padding-right:1.4rem}
 .stamp-paid{background:#16a34a}.stamp-void{background:#64748b}.stamp-overdue{background:#dc2626}
-@media (max-width:560px){.meta{text-align:left}dl{justify-content:start}.stamp{display:none}}
+@media (max-width:560px){.meta{text-align:left}dl{justify-content:start}.stamp{display:none}.sheet:has(.stamp) .meta{padding:0}}
 @media print{
   @page{size:A4;margin:14mm}
   body{background:#fff}

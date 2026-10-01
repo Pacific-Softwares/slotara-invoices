@@ -3,7 +3,7 @@
     "slug": "slotara-invoices",
     "name": "Invoices",
     "description": "Professional invoices for every business: created automatically from bookings or by hand, with tax, a shareable print-ready page for customers, and a clear view of what's paid and what's owed.",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "product": "slotara",
     "requires": { "product": "^1.7", "licentra": "^1.5" },
     "namespace": "Modules\\SlotaraInvoices\\",
