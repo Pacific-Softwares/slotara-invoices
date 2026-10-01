@@ -1,0 +1,19 @@
+{
+    "manifest": 1,
+    "slug": "slotara-invoices",
+    "name": "Invoices",
+    "description": "Professional invoices for every business: created automatically from bookings or by hand, with tax, a shareable print-ready page for customers, and a clear view of what's paid and what's owed.",
+    "version": "1.0.0",
+    "product": "slotara",
+    "requires": { "product": "^1.7", "licentra": "^1.5" },
+    "namespace": "Modules\\SlotaraInvoices\\",
+    "provider": "Modules\\SlotaraInvoices\\ModuleServiceProvider",
+    "envato_item_id": null,
+    "plan_feature": false,
+    "capabilities": {
+        "tables": ["slotara_invoices", "slotara_invoices_items", "slotara_invoices_settings"],
+        "outbound": [],
+        "routes": ["GET /slotara-invoices/view/{private link}"],
+        "schedule": false
+    }
+}
