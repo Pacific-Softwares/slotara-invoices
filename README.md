@@ -18,9 +18,9 @@ Business panel → **Payments → Invoices** (settings from the Invoices page).
 
 ```bash
 # Slotara .env: LICENTRA_MODULES_DEV=true
-ln -s ~/Sites/gitlab/slotara-invoices ~/Sites/gitlab/slotline/modules-dev/slotara-invoices
+ln -s ~/Sites/gitlab/licentra/modules/slotara-invoices ~/Sites/gitlab/slotline/modules-dev/slotara-invoices
 cd ~/Sites/gitlab/slotline && php artisan module:migrate slotara-invoices
-php artisan test ../slotara-invoices/tests/InvoicesModuleTest.php
+php artisan test ../licentra/modules/slotara-invoices/tests/InvoicesModuleTest.php
 ```
 
 ## Release (free add-on)

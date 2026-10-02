@@ -25,7 +25,7 @@ use Pacific\Licentra\Modules\Laravel\ModuleLoader;
 use Tests\TestCase;
 
 /**
- * Runs inside Slotara:  php artisan test ../slotara-invoices/tests/InvoicesModuleTest.php
+ * Runs inside Slotara:  php artisan test ../licentra/modules/slotara-invoices/tests/InvoicesModuleTest.php
  * The module is loaded in developer mode from a scratch folder (never your real modules-dev/).
  */
 class InvoicesModuleTest extends TestCase
