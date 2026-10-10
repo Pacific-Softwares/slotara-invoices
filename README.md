@@ -6,7 +6,8 @@ white-labelled sites never show "slotara" in an address.
 Professional invoices for every business on a Slotara platform.
 
 - **Automatic**: every booking with a price gets an invoice, already marked paid when the booking
-  was paid online; offline/pay-later bookings are marked paid when their payment comes in.
+  was paid online; offline/pay-later bookings are marked paid when their payment comes in, and marking an
+  invoice paid marks its booking paid too (invoice number as the payment reference).
 - **By hand**: line items, quantity × price, tax, live totals, notes.
 - **Customer link**: a clean, print-ready page (Print / Save as PDF) at a private link. No login
   needed, hidden from search engines.

@@ -262,6 +262,36 @@ class InvoicesModuleTest extends TestCase
         $this->assertNotNull($invoice->fresh()->paid_at);
     }
 
+    public function test_marking_an_invoice_paid_marks_its_booking_paid_without_resending_emails(): void
+    {
+        \Illuminate\Support\Facades\Queue::fake();
+        $owner = $this->business();
+        $booking = $this->booking($owner->tenant, ['payment_status' => 'pending']);
+        $invoice = Invoice::withoutGlobalScope('tenant')->where('booking_id', $booking->id)->first();
+        $this->inPanel($owner);
+
+        Livewire::test(\Modules\SlotaraInvoices\Filament\Resources\InvoiceResource\Pages\EditInvoice::class, ['record' => $invoice->getRouteKey()])
+            ->callAction('markPaid')
+            ->assertHasNoActionErrors();
+
+        $booking->refresh();
+        $this->assertSame('paid', $booking->payment_status);
+        $this->assertSame($invoice->number, $booking->payment_reference);
+        $this->assertNotNull($booking->paid_at);
+        \Illuminate\Support\Facades\Queue::assertNotPushed(\App\Jobs\SendBookingConfirmationEmail::class);
+    }
+
+    public function test_saving_an_invoice_as_paid_from_the_form_marks_its_booking_paid(): void
+    {
+        $tenant = $this->business()->tenant;
+        $booking = $this->booking($tenant, ['payment_status' => 'pending']);
+        $invoice = Invoice::withoutGlobalScope('tenant')->where('booking_id', $booking->id)->first();
+
+        $invoice->update(['status' => Invoice::PAID]);
+
+        $this->assertSame('paid', $booking->fresh()->payment_status);
+    }
+
     public function test_another_business_cannot_open_an_invoice_in_its_panel(): void
     {
         $invoice = Invoice::withoutGlobalScope('tenant')->where('booking_id', $this->booking($this->business()->tenant)->id)->first();
