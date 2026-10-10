@@ -292,6 +292,85 @@ class InvoicesModuleTest extends TestCase
         $this->assertSame('paid', $booking->fresh()->payment_status);
     }
 
+    /** What Slotara's Reschedule action does: cancel as "Rescheduled", then book the new time. */
+    private function reschedule(SlotReservation $booking, string $date, string $start): SlotReservation
+    {
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($booking, $date, $start) {
+            $booking->update(['status' => 'cancelled', 'cancelled_at' => now(), 'cancellation_reason' => 'Rescheduled']);
+
+            return SlotReservation::create(collect($booking->getAttributes())
+                ->except(['id', 'created_at', 'updated_at', 'cancelled_at', 'cancellation_reason', 'cancellation_token'])
+                ->merge(['status' => 'confirmed', 'date' => $date, 'start_time' => $start, 'cancellation_token' => (string) Str::uuid()])
+                ->all());
+        });
+    }
+
+    public function test_a_rescheduled_booking_keeps_its_invoice_instead_of_getting_a_second_one(): void
+    {
+        $tenant = $this->business()->tenant;
+        $booking = $this->booking($tenant, ['payment_status' => 'pending']);
+        $invoice = Invoice::withoutGlobalScope('tenant')->where('booking_id', $booking->id)->firstOrFail();
+
+        $newDate = now()->addDays(9)->toDateString();
+        $moved = $this->reschedule($booking, $newDate, '16:00:00');
+
+        $this->assertSame(1, Invoice::withoutGlobalScope('tenant')->count());
+        $invoice->refresh();
+        $this->assertSame($moved->id, $invoice->booking_id);
+        $this->assertSame('INV-0001', $invoice->number);
+        $this->assertStringContainsString(\Illuminate\Support\Carbon::parse($newDate)->format('M j, Y').' 16:00', $invoice->items->first()->description);
+
+        // Paying the new booking still settles the same invoice.
+        $moved->update(['payment_status' => 'paid']);
+        $this->assertSame(Invoice::PAID, $invoice->fresh()->status);
+    }
+
+    public function test_the_admin_reschedule_action_moves_the_invoice(): void
+    {
+        \Illuminate\Support\Facades\Queue::fake();
+        $owner = $this->business();
+        $owner->assignRole('tenant_owner');
+        $tenant = $owner->tenant;
+        $days = collect(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'])
+            ->mapWithKeys(fn ($d) => [$d => ['enabled' => true, 'start' => '09:00', 'end' => '18:00']])->all();
+        \App\Models\Setting::set("tenant_{$tenant->id}_availability", json_encode($days));
+        \App\Models\Setting::set("tenant_{$tenant->id}_default_duration", '30');
+        $booking = $this->booking($tenant, ['payment_status' => 'pending']);
+        $this->inPanel($owner);
+
+        $newDate = now()->addDays(9)->toDateString();
+        Livewire::test(\App\Filament\Tenant\Resources\BookingResource\Pages\ListBookings::class)
+            ->callTableAction('reschedule', $booking, ['new_date' => $newDate, 'new_slot' => '16:00|16:30'])
+            ->assertHasNoTableActionErrors();
+
+        $new = SlotReservation::withoutGlobalScope('tenant')->whereDate('date', $newDate)->firstOrFail();
+        $this->assertSame(1, Invoice::withoutGlobalScope('tenant')->count());
+        $this->assertSame($new->id, Invoice::withoutGlobalScope('tenant')->first()->booking_id);
+    }
+
+    public function test_a_line_the_business_edited_is_left_alone_on_reschedule(): void
+    {
+        $tenant = $this->business()->tenant;
+        $booking = $this->booking($tenant);
+        $invoice = Invoice::withoutGlobalScope('tenant')->where('booking_id', $booking->id)->firstOrFail();
+        $invoice->items->first()->update(['description' => 'Deep-tissue massage, 60 min']);
+
+        $this->reschedule($booking, now()->addDays(9)->toDateString(), '16:00:00');
+
+        $this->assertSame('Deep-tissue massage, 60 min', $invoice->fresh()->items->first()->description);
+    }
+
+    public function test_a_new_booking_after_an_ordinary_cancellation_gets_its_own_invoice(): void
+    {
+        $tenant = $this->business()->tenant;
+        $booking = $this->booking($tenant);
+        $booking->update(['status' => 'cancelled', 'cancelled_at' => now(), 'cancellation_reason' => 'Client cancelled']);
+
+        $this->booking($tenant, ['date' => now()->addDays(9)->toDateString()]);
+
+        $this->assertSame(2, Invoice::withoutGlobalScope('tenant')->count());
+    }
+
     public function test_another_business_cannot_open_an_invoice_in_its_panel(): void
     {
         $invoice = Invoice::withoutGlobalScope('tenant')->where('booking_id', $this->booking($this->business()->tenant)->id)->first();
