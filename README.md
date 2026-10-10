@@ -1,5 +1,8 @@
 # Invoices for Slotara (free add-on)
 
+Pages live at `/manage/invoices` and `/invoices/view/{private link}` (module.json `"url"`), so
+white-labelled sites never show "slotara" in an address.
+
 Professional invoices for every business on a Slotara platform.
 
 - **Automatic**: every booking with a price gets an invoice, already marked paid when the booking

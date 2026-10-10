@@ -24,7 +24,7 @@ class InvoiceSettingsPage extends Page implements HasForms
 
     protected static string $module = 'slotara-invoices';
 
-    protected static ?string $slug = 'slotara-invoices/settings';
+    protected static ?string $slug = 'invoices/settings';
 
     protected static bool $shouldRegisterNavigation = false; // reached from Invoices → Settings
 

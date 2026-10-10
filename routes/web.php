@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Modules\SlotaraInvoices\Models\Invoice;
 use Modules\SlotaraInvoices\Models\InvoiceSettings;
 
-// GET /slotara-invoices/view/{token}, named "slotara-invoices.view": the customer's copy.
+// GET /invoices/view/{token}, named "slotara-invoices.view": the customer's copy.
 // Only someone with the private link can open it (40 random characters).
 Route::get('/view/{token}', function (string $token) {
     $invoice = Invoice::withoutGlobalScope('tenant')->with(['items', 'tenant'])

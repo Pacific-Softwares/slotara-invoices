@@ -221,8 +221,15 @@ class InvoicesModuleTest extends TestCase
 
     public function test_a_guessed_link_finds_nothing(): void
     {
-        $this->get('/slotara-invoices/view/'.str_repeat('a', 40))->assertNotFound();
-        $this->get('/slotara-invoices/view/short')->assertNotFound();
+        $this->get('/invoices/view/'.str_repeat('a', 40))->assertNotFound();
+        $this->get('/invoices/view/short')->assertNotFound();
+    }
+
+    public function test_links_sent_before_the_new_address_still_work(): void
+    {
+        $token = str_repeat('a', 40);
+
+        $this->get('/slotara-invoices/view/'.$token)->assertRedirect('/invoices/view/'.$token)->assertStatus(301);
     }
 
     public function test_settings_page_saves_and_shows_the_next_number(): void

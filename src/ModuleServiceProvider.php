@@ -3,6 +3,7 @@
 namespace Modules\SlotaraInvoices;
 
 use App\Models\SlotReservation;
+use Illuminate\Support\Facades\Route;
 use Modules\SlotaraInvoices\Filament\InvoicesPlugin;
 use Modules\SlotaraInvoices\Models\Invoice;
 use Modules\SlotaraInvoices\Support\BookingInvoicer;
@@ -13,8 +14,11 @@ class ModuleServiceProvider extends BaseProvider
     public function bootModule(): void
     {
         $this->loadModuleResources();
-        // Public, print-ready invoice pages at /slotara-invoices/view/{private link}.
+        // Public, print-ready invoice pages at /invoices/view/{private link}.
         $this->loadModuleRoutes('routes/web.php', ['web']);
+        // Links sent before 1.1.0 used /slotara-invoices/view/{private link}.
+        Route::permanentRedirect('/slotara-invoices/view/{token}', '/invoices/view/{token}')
+            ->where('token', '[A-Za-z0-9]{40}');
 
         // A new booking gets its invoice (unless the business turned that off).
         $this->observe(SlotReservation::class, 'created', fn (SlotReservation $booking) => BookingInvoicer::forBooking($booking));
