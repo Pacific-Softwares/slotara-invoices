@@ -24,12 +24,28 @@ class ModuleServiceProvider extends BaseProvider
         // A new booking gets its invoice (unless the business turned that off).
         $this->observe(SlotReservation::class, 'created', fn (SlotReservation $booking) => BookingInvoicer::forBooking($booking));
 
-        // When a booking is paid later (offline payment, pay-at-venue), its invoice follows.
+        // The invoice follows its booking: cancelled and unpaid → void (a reschedule
+        // moves it instead), active again → reopened, paid → paid.
         $this->observe(SlotReservation::class, 'updated', function (SlotReservation $booking) {
-            if ($booking->wasChanged('payment_status') && in_array($booking->payment_status, ['paid', 'completed', 'succeeded'], true)) {
-                Invoice::withoutGlobalScope('tenant')->where('booking_id', $booking->id)
-                    ->whereIn('status', [Invoice::DRAFT, Invoice::SENT])
-                    ->get()->each->markPaid();
+            $invoices = fn (array $statuses) => Invoice::withoutGlobalScope('tenant')
+                ->where('booking_id', $booking->id)->whereIn('status', $statuses)->get();
+            $paid = in_array($booking->payment_status, ['paid', 'completed', 'succeeded'], true);
+
+            if ($booking->wasChanged('status')) {
+                $wasActive = in_array($booking->getOriginal('status'), ['pending', 'confirmed'], true);
+                $isActive  = in_array($booking->status, ['pending', 'confirmed'], true);
+
+                if ($booking->status === 'cancelled' && $wasActive && ! $paid && $booking->cancellation_reason !== 'Rescheduled') {
+                    $invoices([Invoice::DRAFT, Invoice::SENT])->each->update(['status' => Invoice::VOID]);
+                } elseif ($isActive && $booking->getOriginal('status') === 'cancelled') {
+                    $invoices([Invoice::VOID])->each->update(['status' => Invoice::SENT]);
+                }
+            }
+
+            // Paid later (offline, pay-at-venue, or a payment after the slot hold ended):
+            // the money was received, so the invoice is paid even if it had been voided.
+            if ($booking->wasChanged('payment_status') && $paid) {
+                $invoices([Invoice::DRAFT, Invoice::SENT, Invoice::VOID])->each->markPaid();
             }
         });
 

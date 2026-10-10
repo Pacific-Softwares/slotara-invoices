@@ -371,6 +371,49 @@ class InvoicesModuleTest extends TestCase
         $this->assertSame(2, Invoice::withoutGlobalScope('tenant')->count());
     }
 
+    public function test_cancelling_an_unpaid_booking_voids_its_invoice_and_reactivating_reopens_it(): void
+    {
+        $tenant = $this->business()->tenant;
+        $booking = $this->booking($tenant, ['payment_status' => 'pending']);
+        $invoice = Invoice::withoutGlobalScope('tenant')->where('booking_id', $booking->id)->firstOrFail();
+
+        $booking->update(['status' => 'cancelled', 'cancelled_at' => now(), 'cancellation_reason' => 'Client cancelled']);
+        $this->assertSame(Invoice::VOID, $invoice->fresh()->status);
+
+        $booking->update(['status' => 'confirmed', 'cancelled_at' => null, 'cancellation_reason' => null]);
+        $this->assertSame(Invoice::SENT, $invoice->fresh()->status);
+    }
+
+    public function test_cancelling_a_paid_booking_keeps_its_paid_invoice(): void
+    {
+        $tenant = $this->business()->tenant;
+        $booking = $this->booking($tenant);
+
+        $booking->update(['status' => 'cancelled', 'cancelled_at' => now()]);
+
+        $this->assertSame(Invoice::PAID, Invoice::withoutGlobalScope('tenant')->where('booking_id', $booking->id)->value('status'));
+    }
+
+    public function test_an_abandoned_checkout_voids_the_invoice_and_a_late_payment_marks_it_paid(): void
+    {
+        \Illuminate\Support\Facades\Queue::fake();
+        $tenant = $this->business()->tenant;
+        $booking = $this->booking($tenant, ['payment_status' => 'pending', 'checkout_session_id' => 'cs_1']);
+        $invoice = Invoice::withoutGlobalScope('tenant')->where('booking_id', $booking->id)->firstOrFail();
+        $payments = app(\App\Services\BookingPaymentService::class);
+
+        $payments->releaseUnpaid($booking);
+        $this->assertSame(Invoice::VOID, $invoice->fresh()->status);
+
+        // The slot is gone by the time the payment lands: booking stays cancelled, invoice records the payment.
+        $this->booking($tenant, ['email' => 'someone@else.com', 'checkout_session_id' => null]);
+        $payments->markPaid($booking->fresh(), 'stripe', 'pi_1');
+
+        $this->assertSame('cancelled', $booking->fresh()->status);
+        $this->assertSame(Invoice::PAID, $invoice->fresh()->status);
+        $this->assertSame(1, Invoice::withoutGlobalScope('tenant')->where('booking_id', $booking->id)->count());
+    }
+
     public function test_another_business_cannot_open_an_invoice_in_its_panel(): void
     {
         $invoice = Invoice::withoutGlobalScope('tenant')->where('booking_id', $this->booking($this->business()->tenant)->id)->first();
